@@ -58,6 +58,35 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
+      const dbName = "KosztyWakacjiDB";
+      const dbVersion = 1;
+      let db;
+
+      function openDB() {
+        const request = window.indexedDB.open(dbName, dbVersion);
+
+        request.onerror = function (event) {
+          console.log("Błąd otwierania bazy danych");
+        };
+
+        request.onupgradeneeded = function (event) {
+          const db = event.target.result;
+          const objectStore = db.createObjectStore("costs", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          objectStore.createIndex("cost", "cost", { unique: false });
+          objectStore.createIndex("description", "description", {
+            unique: false,
+          });
+        };
+
+        request.onsuccess = function (event) {
+          db = event.target.result;
+          displayCostsFromDB(); // Wyświetlanie kosztów po otwarciu bazy danych
+        };
+      }
+
       function addCost() {
         const costInput = document.getElementById("cost");
         const descriptionInput = document.getElementById("description");
@@ -65,40 +94,19 @@
         const description = descriptionInput.value;
 
         if (!isNaN(cost) && description.trim() !== "") {
-          const request = window.indexedDB.open("KosztyWakacjiDB", 1);
+          const transaction = db.transaction(["costs"], "readwrite");
+          const objectStore = transaction.objectStore("costs");
 
-          request.onerror = function (event) {
-            console.log("Błąd otwierania bazy danych");
+          const data = { cost, description };
+          const addRequest = objectStore.add(data);
+
+          addRequest.onsuccess = function () {
+            console.log("Koszt dodany do IndexedDB");
+            displayCostsFromDB(); // Odświeżanie tabeli po dodaniu kosztu
           };
 
-          request.onupgradeneeded = function (event) {
-            const db = event.target.result;
-            const objectStore = db.createObjectStore("costs", {
-              keyPath: "id",
-              autoIncrement: true,
-            });
-            objectStore.createIndex("cost", "cost", { unique: false });
-            objectStore.createIndex("description", "description", {
-              unique: false,
-            });
-          };
-
-          request.onsuccess = function (event) {
-            const db = event.target.result;
-            const transaction = db.transaction(["costs"], "readwrite");
-            const objectStore = transaction.objectStore("costs");
-
-            const data = { cost, description };
-            const addRequest = objectStore.add(data);
-
-            addRequest.onsuccess = function () {
-              console.log("Koszt dodany do IndexedDB");
-              displayCostsFromDB(); // Odświeżanie tabeli po dodaniu kosztu
-            };
-
-            addRequest.onerror = function () {
-              console.log("Błąd zapisu danych do IndexedDB");
-            };
+          addRequest.onerror = function () {
+            console.log("Błąd zapisu danych do IndexedDB");
           };
 
           costInput.value = "";
@@ -109,60 +117,52 @@
       }
 
       function displayCostsFromDB() {
-        const request = window.indexedDB.open("KosztyWakacjiDB", 1);
+        const transaction = db.transaction(["costs"], "readonly");
+        const objectStore = transaction.objectStore("costs");
+        const costTableBody = document.getElementById("costTableBody");
 
-        request.onerror = function (event) {
-          console.log("Błąd otwierania bazy danych");
-        };
+        // Usunięcie zawartości tabeli przed dodaniem nowych danych
+        costTableBody.innerHTML = "";
 
-        request.onsuccess = function (event) {
-          const db = event.target.result;
-          const transaction = db.transaction(["costs"], "readonly");
-          const objectStore = transaction.objectStore("costs");
-          const costTableBody = document.getElementById("costTableBody");
+        objectStore.openCursor().onsuccess = function (event) {
+          const cursor = event.target.result;
 
-          // Usunięcie zawartości tabeli przed dodaniem nowych danych
-          costTableBody.innerHTML = "";
+          if (cursor) {
+            const cost = cursor.value.cost;
+            const description = cursor.value.description;
+            const id = cursor.value.id;
 
-          objectStore.openCursor().onsuccess = function (event) {
-            const cursor = event.target.result;
+            const newRow = costTableBody.insertRow();
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
 
-            if (cursor) {
-              const cost = cursor.value.cost;
-              const description = cursor.value.description;
+            cell1.textContent = cost.toFixed(2) + " zł";
+            cell2.textContent = description;
 
-              const newRow = costTableBody.insertRow();
-              const cell1 = newRow.insertCell(0);
-              const cell2 = newRow.insertCell(1);
-              const cell3 = newRow.insertCell(2);
+            const editButton = document.createElement("button");
+            editButton.textContent = "Edytuj";
+            editButton.classList.add("btn", "btn-info", "btn-sm", "mr-1");
+            editButton.onclick = function () {
+              editRow(id, newRow);
+            };
 
-              cell1.textContent = cost.toFixed(2) + " zł";
-              cell2.textContent = description;
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Usuń";
+            deleteButton.classList.add("btn", "btn-danger", "btn-sm");
+            deleteButton.onclick = function () {
+              deleteRow(id, newRow);
+            };
 
-              const editButton = document.createElement("button");
-              editButton.textContent = "Edytuj";
-              editButton.classList.add("btn", "btn-info", "btn-sm", "mr-1");
-              editButton.onclick = function () {
-                editRow(newRow);
-              };
+            cell3.appendChild(editButton);
+            cell3.appendChild(deleteButton);
 
-              const deleteButton = document.createElement("button");
-              deleteButton.textContent = "Usuń";
-              deleteButton.classList.add("btn", "btn-danger", "btn-sm");
-              deleteButton.onclick = function () {
-                deleteRow(newRow);
-              };
-
-              cell3.appendChild(editButton);
-              cell3.appendChild(deleteButton);
-
-              cursor.continue();
-            }
-          };
+            cursor.continue();
+          }
         };
       }
 
-      function editRow(row) {
+      function editRow(id, row) {
         const cells = row.getElementsByTagName("td");
         const costInput = prompt(
           "Wprowadź nową wartość kosztu:",
@@ -179,19 +179,45 @@
           !isNaN(parseFloat(costInput)) &&
           descriptionInput.trim() !== ""
         ) {
-          cells[0].textContent = parseFloat(costInput).toFixed(2) + " zł";
-          cells[1].textContent = descriptionInput;
+          const transaction = db.transaction(["costs"], "readwrite");
+          const objectStore = transaction.objectStore("costs");
+
+          const getRequest = objectStore.get(id);
+          getRequest.onsuccess = function (event) {
+            const data = event.target.result;
+            data.cost = parseFloat(costInput);
+            data.description = descriptionInput;
+
+            const updateRequest = objectStore.put(data);
+            updateRequest.onsuccess = function () {
+              console.log("Koszt zaktualizowany w IndexedDB");
+              displayCostsFromDB(); // Odświeżenie tabeli po zaktualizowaniu kosztu
+            };
+            updateRequest.onerror = function () {
+              console.log("Błąd aktualizacji kosztu w IndexedDB");
+            };
+          };
         } else {
           alert("Nieprawidłowe dane.");
         }
       }
 
-      function deleteRow(row) {
-        row.remove();
+      function deleteRow(id, row) {
+        const transaction = db.transaction(["costs"], "readwrite");
+        const objectStore = transaction.objectStore("costs");
+
+        const deleteRequest = objectStore.delete(id);
+        deleteRequest.onsuccess = function () {
+          console.log("Koszt usunięty z IndexedDB");
+          row.remove(); // Usunięcie wiersza z tabeli po udanym usunięciu kosztu
+        };
+        deleteRequest.onerror = function () {
+          console.log("Błąd usuwania kosztu z IndexedDB");
+        };
       }
 
-      // Wywołanie funkcji do wyświetlenia kosztów z IndexedDB na start
-      displayCostsFromDB();
+      // Wywołanie funkcji otwierającej bazę danych
+      openDB();
     </script>
   </body>
 </html>
