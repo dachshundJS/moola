@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Koszty Wakacji</title>
+    <!-- Dodanie Bootstrap CSS -->
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #3498db; /* Błękitne tło */
+        color: #fff; /* Kolor tekstu na tle */
+      }
+    </style>
+    <!-- Dodanie manifestu PWA -->
+    <link rel="manifest" href="/manifest.json" />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="mt-5">Koszty Wakacji</h1>
+      <form id="costForm" class="mt-4">
+        <div class="form-group">
+          <label for="cost">Koszt:</label>
+          <input type="number" class="form-control" id="cost" name="cost" />
+        </div>
+        <div class="form-group">
+          <label for="description">Opis:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="description"
+            name="description"
+          />
+        </div>
+        <button type="button" class="btn btn-primary" onclick="addCost()">
+          Dodaj Koszt
+        </button>
+      </form>
+      <table id="costTable" class="table mt-5">
+        <thead>
+          <tr>
+            <th>Koszt</th>
+            <th>Opis</th>
+            <th>Akcje</th>
+            <!-- Dodany nowy nagłówek dla akcji -->
+          </tr>
+        </thead>
+        <tbody id="costTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Dodanie Bootstrap JS i jQuery (potrzebne dla Bootstrap) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+      function addCost() {
+        const costInput = document.getElementById("cost");
+        const descriptionInput = document.getElementById("description");
+        const cost = parseFloat(costInput.value);
+        const description = descriptionInput.value;
+
+        if (!isNaN(cost) && description.trim() !== "") {
+          const tableBody = document.getElementById("costTableBody");
+          const newRow = tableBody.insertRow();
+
+          const cell1 = newRow.insertCell(0);
+          const cell2 = newRow.insertCell(1);
+          const cell3 = newRow.insertCell(2); // Dodana komórka dla akcji
+
+          cell1.textContent = cost.toFixed(2) + " zł";
+          cell2.textContent = description;
+
+          // Dodanie przycisków edycji i usuwania
+          const editButton = document.createElement("button");
+          editButton.textContent = "Edytuj";
+          editButton.classList.add("btn", "btn-info", "btn-sm", "mr-1");
+          editButton.onclick = function () {
+            editRow(newRow);
+          };
+
+          const deleteButton = document.createElement("button");
+          deleteButton.textContent = "Usuń";
+          deleteButton.classList.add("btn", "btn-danger", "btn-sm");
+          deleteButton.onclick = function () {
+            deleteRow(newRow);
+          };
+
+          cell3.appendChild(editButton);
+          cell3.appendChild(deleteButton);
+
+          costInput.value = "";
+          descriptionInput.value = "";
+        } else {
+          alert("Proszę podać poprawną wartość kosztu i opis.");
+        }
+      }
+
+      function editRow(row) {
+        const cells = row.getElementsByTagName("td");
+        const costInput = prompt(
+          "Wprowadź nową wartość kosztu:",
+          cells[0].textContent.replace(" zł", "")
+        );
+        const descriptionInput = prompt(
+          "Wprowadź nowy opis:",
+          cells[1].textContent
+        );
+
+        if (
+          costInput !== null &&
+          descriptionInput !== null &&
+          !isNaN(parseFloat(costInput)) &&
+          descriptionInput.trim() !== ""
+        ) {
+          cells[0].textContent = parseFloat(costInput).toFixed(2) + " zł";
+          cells[1].textContent = descriptionInput;
+        } else {
+          alert("Nieprawidłowe dane.");
+        }
+      }
+
+      function deleteRow(row) {
+        row.remove();
+      }
+    </script>
+  </body>
+</html>

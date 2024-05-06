@@ -1,0 +1,24 @@
+{
+  "name": "Koszty Wakacji",
+  "short_name": "Koszty",
+  "description": "Aplikacja do zarządzania kosztami wakacyjnymi",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/apka.html",
+  "display": "standalone",
+  "background_color": "#3498db",
+  "theme_color": "#3498db",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "pl",
+  "serviceworker": {
+    "src": "/sw.js"
+  },
+  "prefer_related_applications": false,
+  "related_applications": []
+}
