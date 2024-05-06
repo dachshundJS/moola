@@ -9,7 +9,7 @@
       "type": "image/png"
     }
   ],
-  "start_url": "/",
+  "start_url": "/moola/",
   "display": "standalone",
   "background_color": "#3498db",
   "theme_color": "#3498db",
